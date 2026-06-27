@@ -1,0 +1,41 @@
+name: DTRH Resale Tracker
+
+on:
+  schedule:
+    - cron: '0 7 * * *'   # 09:00 Nederlandse tijd
+    - cron: '0 11 * * *'  # 13:00 Nederlandse tijd
+    - cron: '0 15 * * *'  # 17:00 Nederlandse tijd
+    - cron: '0 19 * * *'  # 21:00 Nederlandse tijd
+  workflow_dispatch: {}    # ook handmatig te starten via GitHub
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Python installen
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Playwright installen
+        run: |
+          pip install playwright playwright-stealth
+          playwright install chromium --with-deps
+
+      - name: Scraper draaien
+        run: python dtrh_scraper.py
+
+      - name: Data opslaan in repo
+        run: |
+          git config user.name "DTRH Bot"
+          git config user.email "bot@users.noreply.github.com"
+          cp dtrh_dashboard.html index.html
+          git add dtrh_resale_data.csv dtrh_dashboard.html index.html
+          git diff --staged --quiet || git commit -m "Data update $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
